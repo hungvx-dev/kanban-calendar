@@ -1,0 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700&display=swap");
+
+/* styles/calendar.css */
+:root {
+  --font-base: "Inter", sans-serif;
+}
+
+body {
+  font-family: var(--font-base);
+  margin: 0;
+  line-height: normal;
+  height: 100dvh;
+}
+
+#root {
+  width: 1440px;
+  height: 100%;
+  padding: 60px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}

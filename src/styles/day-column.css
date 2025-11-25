@@ -1,0 +1,38 @@
+.day-column {
+  display: flex;
+  flex-direction: column;
+  background: #f6f7fb;
+  padding: 8px;
+  border-radius: 6px;
+  height: 100%;
+}
+
+.day-column__header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.day-column__weekday {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6a7988;
+}
+
+.day-column__date {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6a7988;
+}
+
+.day-column__date--today {
+  color: #5a57cb;
+  font-weight: 700;
+}
+
+.day-column__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}

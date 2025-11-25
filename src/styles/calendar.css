@@ -1,0 +1,33 @@
+.calendar-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.calendar-btn {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+}
+
+.calendar-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* minmax for fix ellipsis*/
+  gap: 10px;
+  flex-grow: 1;
+}

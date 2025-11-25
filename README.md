@@ -6,6 +6,10 @@
 - **Vanilla CSS**
 - **Bun**
 
+## Evidence
+
+[▶️ Demo video](./evidence/calendar.mov)
+
 ## 📦 Installation & Run
 
 ### 1. Install dependencies
@@ -52,7 +56,7 @@ bun dev
 #### Exercise → Workout
 
 - Move exercise across workouts.
-- Sort exercise inside a workout 
+- Sort exercise inside a workout
 
 ## ✔ Mock API
 

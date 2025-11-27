@@ -2,44 +2,60 @@ import type { Active, Over } from "@dnd-kit/core";
 import type { Day } from "../../../types/calendar";
 import {
   SortableKind,
-  type SortaleData,
+  type SortableData,
 } from "../../../types/calendar-sortable";
 import { arrayMove } from "@dnd-kit/sortable";
 
+const isMovingBelowOverItem = (active: Active, over: Over) =>
+  Boolean(
+    active.rect.current.translated &&
+      active.rect.current.translated.top > over.rect.top + over.rect.height,
+  );
+
+// - Active must be Workout, Over must be
+//    + Over is day -> push to end of over workouts
+//    + Active and Over difference day -> insert to over workouts
 export function moveWorkoutThroughColumn(
   days: Day[],
   active: Active,
   over: Over,
 ): Day[] | null {
-  const a = active.data.current as SortaleData<SortableKind.Workout>;
-  const o = over.data.current as SortaleData<
+  const activeData = active.data.current as SortableData<SortableKind.Workout>;
+  const overData = over.data.current as SortableData<
     SortableKind.Workout | SortableKind.Day
   >;
-  if (a.kind !== SortableKind.Workout) return null;
 
-  const isSameColumnWithKindDay =
-    o.dayIndex === a.dayIndex && o.kind === SortableKind.Day;
-  const isDiffColumn = o.dayIndex !== a.dayIndex;
+  if (
+    activeData.kind !== SortableKind.Workout ||
+    !(overData.kind & (SortableKind.Day | SortableKind.Workout))
+  )
+    return null;
 
-  if (isSameColumnWithKindDay || isDiffColumn) {
-    const newDays = structuredClone(days);
-    const activeWorkouts = newDays[a.dayIndex].workouts;
-    const overWorkouts = newDays[o.dayIndex].workouts;
-    let newIndex: number = overWorkouts.length + 1; // SortableKind.Day
-    if (o.kind === SortableKind.Workout) {
-      const isBelowOverItem =
-        active.rect.current.translated &&
-        active.rect.current.translated.top > over.rect.top + over.rect.height;
-      newIndex = o.sortable.index + (isBelowOverItem ? 1 : 0);
-    }
+  const isDifferentDay = overData.dayIndex !== activeData.dayIndex;
+  if (!isDifferentDay) return null;
 
-    const [moved] = activeWorkouts.splice(a.sortable.index, 1);
-    moved.date = newDays[o.dayIndex].date.toISOString();
-    newDays[o.dayIndex].workouts.splice(newIndex, 0, moved);
+  const activeWorkouts = [...days[activeData.dayIndex].workouts];
+  const overWorkouts = [...days[overData.dayIndex].workouts];
 
-    return newDays;
+  const [moved] = activeWorkouts.splice(activeData.sortable.index, 1);
+
+  let newIndex: number = overWorkouts.length; // SortableKind.Day
+  if (overData.kind === SortableKind.Workout) {
+    newIndex =
+      overData.sortable.index + (isMovingBelowOverItem(active, over) ? 1 : 0);
   }
-  return null;
+
+  overWorkouts.splice(newIndex, 0, {
+    ...moved,
+    date: days[overData.dayIndex].date.toISOString(),
+  });
+
+  return days.map((day, index) => {
+    if (index === activeData.dayIndex)
+      return { ...day, workouts: activeWorkouts };
+    if (index === overData.dayIndex) return { ...day, workouts: overWorkouts };
+    return day;
+  });
 }
 
 export function sortWorkoutInsideColumns(
@@ -47,16 +63,17 @@ export function sortWorkoutInsideColumns(
   active: Active,
   over: Over,
 ): Day[] | null {
-  const a = active.data.current as SortaleData<SortableKind.Workout>;
-  const o = over.data.current as SortaleData<
-    SortableKind.Workout | SortableKind.Day
-  >;
-  if (o.dayIndex === a.dayIndex && o.kind === SortableKind.Workout) {
-    const activeIndex = a.sortable.index;
-    const overIndex = o.sortable.index;
+  const activeData = active.data.current as SortableData<SortableKind.Workout>;
+  const overData = over.data.current as SortableData<SortableKind.Workout>;
+  const isSameDayWorkout =
+    overData.dayIndex === activeData.dayIndex &&
+    overData.kind === SortableKind.Workout;
+  if (isSameDayWorkout) {
+    const activeIndex = activeData.sortable.index;
+    const overIndex = overData.sortable.index;
     if (activeIndex !== overIndex) {
       return days.map((day, i) =>
-        i === o.dayIndex
+        i === overData.dayIndex
           ? {
               ...day,
               workouts: arrayMove(day.workouts, activeIndex, overIndex),
@@ -68,39 +85,65 @@ export function sortWorkoutInsideColumns(
   return null;
 }
 
+// Overdata is kind = exercise for sortable difference workout
+// Overdata is kind = workout for adding to empty workout
 export function moveExerciseThroughWorkoutCard(
   days: Day[],
   active: Active,
   over: Over,
 ): Day[] | null {
-  const a = active.data.current as SortaleData<SortableKind.Exercise>;
-  const o = over.data.current as SortaleData<
+  const activeData = active.data.current as SortableData<SortableKind.Exercise>;
+  const overData = over.data.current as SortableData<
     SortableKind.Exercise | SortableKind.Workout
   >;
-  if (a.kind !== SortableKind.Exercise || o.kind & SortableKind.Day)
+
+  if (
+    activeData.kind !== SortableKind.Exercise ||
+    !(overData.kind & (SortableKind.Exercise | SortableKind.Workout))
+  )
     return null;
 
-  const isDiffWorkout =
-    a.exercise.workoutId !== days[o.dayIndex].workouts[o.workoutIndex].id;
-  if (isDiffWorkout) {
-    const newDays = structuredClone(days);
-    const activeExercise =
-      newDays[a.dayIndex].workouts[a.workoutIndex].exercises;
-    const overWorkout = newDays[o.dayIndex].workouts[o.workoutIndex];
-    let newIndex: number = overWorkout.exercises.length + 1; // SortableKind.Workout
-    if (o.kind !== SortableKind.Exercise) {
-      const isBelowOverItem =
-        active.rect.current.translated &&
-        active.rect.current.translated.top > over.rect.top + over.rect.height;
-      newIndex = o.sortable.index + (isBelowOverItem ? 1 : 0);
-    }
+  const overWorkout = days[overData.dayIndex].workouts[overData.workoutIndex];
+  const isDiffWorkout = activeData.exercise.workoutId !== overWorkout.id;
 
-    const [moved] = activeExercise.splice(a.sortable.index, 1);
-    moved.workoutId = overWorkout.id;
-    overWorkout.exercises.splice(newIndex, 0, moved);
-    return newDays;
+  if (!isDiffWorkout) return null;
+
+  const activeExercises = [
+    ...days[activeData.dayIndex].workouts[activeData.workoutIndex].exercises,
+  ];
+  const [moved] = activeExercises.splice(activeData.sortable.index, 1);
+
+  const overExercises = [...overWorkout.exercises];
+
+  let newIndex = overExercises.length;
+  if (overData.kind !== SortableKind.Exercise) {
+    newIndex =
+      overData.sortable.index + (isMovingBelowOverItem(active, over) ? 1 : 0);
   }
-  return null;
+
+  overExercises.splice(newIndex, 0, {
+    ...moved,
+    workoutId: overWorkout.id,
+  });
+
+  return days.map((day, dayIndex) => {
+    const isActiveDay = dayIndex === activeData.dayIndex;
+    const isOverDay = dayIndex === overData.dayIndex;
+    if (!isActiveDay && !isOverDay) return day;
+
+    return {
+      ...day,
+      workouts: day.workouts.map((workout, index) => {
+        if (isActiveDay && index === activeData.workoutIndex) {
+          return { ...workout, exercises: activeExercises };
+        }
+        if (isOverDay && index === overData.workoutIndex) {
+          return { ...workout, exercises: overExercises };
+        }
+        return workout;
+      }),
+    };
+  });
 }
 
 export function sortExerciseInsideWorkout(
@@ -108,25 +151,29 @@ export function sortExerciseInsideWorkout(
   active: Active,
   over: Over,
 ): Day[] | null {
-  const a = active.data.current as SortaleData<SortableKind.Exercise>;
-  const o = over.data.current as SortaleData<SortableKind.Exercise>;
+  const activeData = active.data.current as SortableData<SortableKind.Exercise>;
+  const overData = over.data.current as SortableData<SortableKind.Exercise>;
   if (
-    o.workoutIndex === a.workoutIndex &&
-    a.kind & o.kind & SortableKind.Exercise
+    overData.workoutIndex === activeData.workoutIndex &&
+    activeData.kind & overData.kind & SortableKind.Exercise
   ) {
-    const activeIndex = a.sortable.index;
-    const overIndex = o.sortable.index;
+    const activeIndex = activeData.sortable.index;
+    const overIndex = overData.sortable.index;
     if (activeIndex !== overIndex) {
-      return days.map((day, di) =>
-        di === o.dayIndex
+      return days.map((day, dayIndex) =>
+        dayIndex === overData.dayIndex
           ? {
               ...day,
-              workouts: day.workouts.map((w, wi) =>
-                wi !== a.workoutIndex
-                  ? w
+              workouts: day.workouts.map((workout, workoutIndex) =>
+                workoutIndex !== activeData.workoutIndex
+                  ? workout
                   : {
-                      ...w,
-                      exercises: arrayMove(w.exercises, activeIndex, overIndex),
+                      ...workout,
+                      exercises: arrayMove(
+                        workout.exercises,
+                        activeIndex,
+                        overIndex,
+                      ),
                     },
               ),
             }

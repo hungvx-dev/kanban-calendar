@@ -1,6 +1,6 @@
 import { useDroppable } from "@dnd-kit/core";
 import type { Day } from "../../../types/calendar";
-import WorkouSortable from "../work-card/WorkouSortable";
+import WorkouSortable from "../work-card/WorkoutSortable";
 import { SortableKind } from "../../../types/calendar-sortable";
 
 type Props = {

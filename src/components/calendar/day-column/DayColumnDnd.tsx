@@ -7,6 +7,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 
@@ -15,7 +16,7 @@ import DayColumnDroppable from "./DayColumnDroppable";
 import WorkoutCard from "../work-card/WorkoutCard";
 import {
   SortableKind,
-  type SortaleData,
+  type SortableData,
 } from "../../../types/calendar-sortable";
 import ExerciseItem from "../exercise/ExerciseItem";
 
@@ -26,24 +27,37 @@ function DayColumnDnd() {
     handleDragOver: handleWorkoutDragOverOtherColumn,
   } = useCalendarContext();
   const [activeData, setActiveData] =
-    useState<SortaleData<SortableKind> | null>(null);
+    useState<SortableData<SortableKind> | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
   );
 
   const handleDragStart = ({ active }: DragStartEvent) => {
-    const data = active.data.current as SortaleData<SortableKind>;
+    const data = active.data.current as SortableData<SortableKind>;
     setActiveData(data);
   };
 
-  const handleDragOver = (event: DragEndEvent) => {
+  const handleDragOver = (event: DragOverEvent) => {
     handleWorkoutDragOverOtherColumn(event);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     handleWorkoutDragEnd(event);
     setActiveData(null);
+  };
+
+  const renderOverlay = () => {
+    if (!activeData) return null;
+
+    switch (activeData.kind) {
+      case SortableKind.Workout:
+        return <WorkoutCard {...activeData} />;
+      case SortableKind.Exercise:
+        return <ExerciseItem {...activeData} />;
+      default:
+        return null;
+    }
   };
 
   return (
@@ -58,18 +72,7 @@ function DayColumnDnd() {
           <DayColumnDroppable key={day.id} day={day} />
         ))}
       </div>
-      <DragOverlay>
-        {(() => {
-          switch (activeData?.kind) {
-            case SortableKind.Workout:
-              return <WorkoutCard {...activeData} />;
-            case SortableKind.Exercise:
-              return <ExerciseItem {...activeData} />;
-            default:
-              return null;
-          }
-        })()}
-      </DragOverlay>
+      <DragOverlay>{renderOverlay()}</DragOverlay>
     </DndContext>
   );
 }

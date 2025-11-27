@@ -6,7 +6,7 @@ export const enum SortableKind {
   Exercise = 4, // 100
 }
 
-type _SortaleData =
+type SortaleDataBase =
   | { kind: SortableKind.Day; dayIndex: number }
   | {
       kind: SortableKind.Workout;
@@ -23,7 +23,7 @@ type _SortaleData =
       sortable: { index: number };
     };
 
-export type SortaleData<K extends SortableKind> = Extract<
-  _SortaleData,
+export type SortableData<K extends SortableKind> = Extract<
+  SortaleDataBase,
   { kind: K }
 >;
